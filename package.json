@@ -2,7 +2,7 @@
   "name": "rl-visual",
   "description": "Webcomponent rl-visual following open-wc recommendations",
   "license": "MIT",
-  "author": "rl-visual",
+  "author": "healqq",
   "version": "0.0.0",
   "scripts": {
     "lint": "eslint --ext .ts,.html . --ignore-path .gitignore && prettier \"**/*.ts\" --check --ignore-path .gitignore",
