@@ -1,19 +1,10 @@
-export interface RGBColor {
-  r: number;
-  g: number;
-  b: number;
-}
-
-export const RGBColorToString = (rgbColor: RGBColor) =>
-  `rgb(${rgbColor.r}, ${rgbColor.g}, ${rgbColor.b})`;
-
-const linearScale = (start: number, end: number, point: number) =>
-  start + (end - start) * point;
+import { RGBColor } from './types';
+import { linearScale } from './util';
 
 export class ColorScale {
   constructor(private startColor: RGBColor, private endColor: RGBColor) {}
 
-  getAt(value: number) {
+  getAt(value: number): RGBColor {
     if (value < 0) {
       return this.startColor;
     }

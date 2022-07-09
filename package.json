@@ -48,6 +48,9 @@
   },
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "project": ["./tsconfig.json"]
+    },
     "extends": [
       "@open-wc",
       "prettier"
@@ -60,12 +63,16 @@
       "@typescript-eslint/no-unused-vars": [
         "error"
       ],
+      "consistent-return": "off",
       "no-useless-constructor": "off",
       "@typescript-eslint/no-useless-constructor": ["error"],
       "no-empty-function": "off",
       "@typescript-eslint/no-empty-function": ["error"],
       "no-shadow": "off",
       "@typescript-eslint/no-shadow": ["error"],
+      "default-case": "off",
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "class-methods-use-this": "off",
       "import/no-unresolved": "off",
       "import/extensions": [
         "error",
@@ -73,7 +80,8 @@
           "js": "ignorePackages",
           "ts": "never"
         }
-      ]      
+      ],
+      "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.ts"]}]    
     }
   },
   "prettier": {

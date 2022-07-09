@@ -1,8 +1,9 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { RGBColor, RGBColorToString } from './colors/color-scale';
-import { GameFieldElementKind, Grid as GridType } from './util/grid';
+import { RGBColor } from './colors/types';
+import { RGBColorToString } from './colors/util';
+import { GameFieldElementKind, Grid2D } from './util/grid';
 
 const gameFieldElementKindMap: Record<GameFieldElementKind, string> = {
   [GameFieldElementKind.EMPTY]: '',
@@ -23,10 +24,10 @@ export class Grid extends LitElement {
   protected height: number = 10;
 
   @property({ attribute: false })
-  protected gridValues: GridType<GameFieldElementKind> = [];
+  protected gridValues: Grid2D<GameFieldElementKind> = [];
 
   @property({ attribute: false })
-  protected gridColors: GridType<RGBColor> = [];
+  protected gridColors: Grid2D<RGBColor> = [];
 
   static styles = css`
     .grid {
@@ -42,7 +43,7 @@ export class Grid extends LitElement {
     }
   `;
 
-  render() {
+  render(): TemplateResult {
     return html`
       <section
         class="grid"
@@ -56,11 +57,13 @@ export class Grid extends LitElement {
             (cell, columnIndex) => html`
               <div
                 class="grid__cell"
-                style=${styleMap({
-                  backgroundColor: RGBColorToString(
-                    this.gridColors[rowIndex][columnIndex]
-                  ),
-                })}
+                style=${this.gridColors.length
+                  ? styleMap({
+                      backgroundColor: RGBColorToString(
+                        this.gridColors[rowIndex][columnIndex]
+                      ),
+                    })
+                  : {}}
               >
                 ${gameFieldElementKindMap[cell]}
               </div>

@@ -2,33 +2,40 @@ import { LitElement, html, css } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import {
   createGameFieldGrid,
-  createGrid,
   GameFieldElementKind,
-  Grid,
+  Grid2D,
+  normalize2DGrid,
 } from './util/grid';
 import './Grid';
-import { ColorScale, RGBColor } from './colors/color-scale';
+import { ColorScale } from './colors/ColorScale';
+import { RGBColor } from './colors/types';
+import RLAgent from './rl/RLAgent';
+import GreedyPolicy from './rl/Policy';
 
 const colorScale = new ColorScale(
-  { r: 3, g: 65, b: 252 },
-  { r: 252, g: 3, b: 252 }
+  { r: 239, g: 243, b: 255 },
+  { r: 8, g: 69, b: 147 }
 );
+
+const policy = new GreedyPolicy(0.1);
 
 export class Root extends LitElement {
   @property({ type: String })
   title = 'My app';
 
   @state()
-  protected grid: Grid<GameFieldElementKind>;
+  protected grid: Grid2D<GameFieldElementKind>;
 
   @state()
-  protected gridColors: Grid<RGBColor>;
+  protected gridColors: Grid2D<RGBColor>;
 
   @state()
   protected width: number = 10;
 
   @state()
   protected height: number = 10;
+
+  protected agent: RLAgent;
 
   static styles = css`
     :host {
@@ -69,7 +76,8 @@ export class Root extends LitElement {
   constructor() {
     super();
     this.grid = this.createGrid();
-    this.gridColors = this.createGridColors();
+    this.gridColors = [];
+    this.agent = new RLAgent(this.grid, [0, 0], policy);
   }
 
   private createGrid() {
@@ -79,8 +87,7 @@ export class Root extends LitElement {
     });
   }
 
-  private createGridColors() {
-    const grid = createGrid(this.width, this.height, { r: 0, g: 0, b: 0 });
+  private createGridColors(grid: Grid2D<number>) {
     // TODO use data
     return grid.map(row => row.map(() => colorScale.getAt(Math.random())));
   }
@@ -92,7 +99,7 @@ export class Root extends LitElement {
 
     this.width = parseInt((e.currentTarget as HTMLInputElement).value, 10);
     this.grid = this.createGrid();
-    this.gridColors = this.createGridColors();
+    // this.gridColors = this.createGridColors();
   }
 
   private onHeightChange(e: InputEvent) {
@@ -102,7 +109,24 @@ export class Root extends LitElement {
 
     this.height = parseInt((e.currentTarget as HTMLInputElement).value, 10);
     this.grid = this.createGrid();
-    this.gridColors = this.createGridColors();
+    // this.gridColors = this.createGridColors();
+  }
+
+  private async runRL() {
+    const result = await this.agent.runEpisodes(100);
+
+    // console.log(result);
+    const updatedPolicy = this.agent.getOptimalPolicy();
+
+    const scaledAV = normalize2DGrid(updatedPolicy);
+
+    console.log(
+      result.reduce((acc, cur) => acc + cur.steps, 0) / result.length
+    );
+
+    console.log(updatedPolicy);
+    console.log(scaledAV);
+    this.gridColors = this.createGridColors(scaledAV);
   }
 
   render() {
@@ -133,6 +157,7 @@ export class Root extends LitElement {
             />
           </div>
         </div>
+        <button @click="${this.runRL}">run RL</button>
         <rl-visual-grid
           .gridValues=${this.grid}
           .gridColors=${this.gridColors}
