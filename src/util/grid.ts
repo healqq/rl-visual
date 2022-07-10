@@ -1,5 +1,3 @@
-import { linearScale } from '../colors/util';
-
 export enum GameFieldElementKind {
   EMPTY,
   START,
@@ -32,8 +30,8 @@ export const create2DGrid = <T>(
   initialValue: T
 ): Grid2D<T> => {
   const grid = [];
-  for (let i = 0; i < y; i += 1) {
-    grid.push(new Array(x).fill(initialValue));
+  for (let i = 0; i < x; i += 1) {
+    grid.push(new Array(y).fill(initialValue));
   }
 
   return grid;
@@ -45,13 +43,7 @@ export const normalize2DGrid = (grid: Grid2D<number>): Grid2D<number> => {
   const min = Math.min(...flatArray);
   const range = max - min;
 
-  console.log(min, max, range);
-  return grid.map(row =>
-    row.map(val => {
-      console.log(val - min / range);
-      return linearScale(min, max, val - min / range);
-    })
-  );
+  return grid.map(col => col.map(val => (val - min) / range));
 };
 
 export const create3DGrid = <T>(
@@ -67,13 +59,13 @@ export const create3DGrid = <T>(
   initialValue: T
 ): Grid3D<T> => {
   const grid = [];
-  for (let i = 0; i < y; i += 1) {
-    const row = [];
-    for (let j = 0; j < x; j += 1) {
-      row.push(new Array(z).fill(initialValue));
+  for (let i = 0; i < x; i += 1) {
+    const col = [];
+    for (let j = 0; j < y; j += 1) {
+      col.push(new Array(z).fill(initialValue));
     }
 
-    grid.push(row);
+    grid.push(col);
   }
 
   return grid;
@@ -82,11 +74,9 @@ export const create3DGrid = <T>(
 export const createGameFieldGrid = ({
   width,
   height,
-  bombsCount = 5,
 }: {
   width: number;
   height: number;
-  bombsCount?: number;
 }): Grid2D<GameFieldElementKind> => {
   const grid = create2DGrid<GameFieldElementKind>(
     {
@@ -97,8 +87,9 @@ export const createGameFieldGrid = ({
   );
 
   /* TODO: make sure that overlaps are not possible */
-  const [startElementX, startElementY] = getRandom2DCoordinate(width, height);
+  const [startElementX, startElementY] = [0, 0];
   const [endElementX, endElementY] = getRandom2DCoordinate(width, height);
+  const bombsCount = Math.floor(Math.sqrt(width * height));
 
   const bombs = [...Array.from({ length: bombsCount })].map(() =>
     getRandom2DCoordinate(width, height)
@@ -112,4 +103,19 @@ export const createGameFieldGrid = ({
   grid[endElementX][endElementY] = GameFieldElementKind.FINISH;
 
   return grid;
+};
+
+/* 
+  TODO: number should be replaced with "primitive" 
+  but we only use numbers for now
+*/
+type ArrayLike<T> = Array<ArrayLike<T>> | Array<T>;
+
+export const shape = <T>(arrayLike: ArrayLike<T>): number[] => {
+  const [el] = arrayLike;
+  if (Array.isArray(el)) {
+    return [arrayLike.length, ...shape(el)];
+  }
+
+  return [arrayLike.length];
 };

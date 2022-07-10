@@ -10,32 +10,35 @@ import './Grid';
 import { ColorScale } from './colors/ColorScale';
 import { RGBColor } from './colors/types';
 import RLAgent from './rl/RLAgent';
-import GreedyPolicy from './rl/Policy';
+import GreedyPolicy, { PolicyAction } from './rl/Policy';
 
 const colorScale = new ColorScale(
   { r: 239, g: 243, b: 255 },
   { r: 8, g: 69, b: 147 }
 );
 
-const policy = new GreedyPolicy(0.1);
+const policy = new GreedyPolicy(0.5);
 
 export class Root extends LitElement {
   @property({ type: String })
   title = 'My app';
 
   @state()
-  protected grid: Grid2D<GameFieldElementKind>;
+  protected grid!: Grid2D<GameFieldElementKind>;
 
   @state()
-  protected gridColors: Grid2D<RGBColor>;
+  protected gridColors!: Grid2D<RGBColor>;
 
   @state()
-  protected width: number = 10;
+  protected gridPolicy!: Grid2D<PolicyAction>;
 
   @state()
-  protected height: number = 10;
+  protected width: number = 25;
 
-  protected agent: RLAgent;
+  @state()
+  protected height: number = 25;
+
+  protected agent!: RLAgent;
 
   static styles = css`
     :host {
@@ -58,6 +61,7 @@ export class Root extends LitElement {
     .controls {
       display: flex;
       flex-direction: column;
+      margin-bottom: 20px;
     }
 
     .controls__input-wrapper {
@@ -75,65 +79,74 @@ export class Root extends LitElement {
 
   constructor() {
     super();
-    this.grid = this.createGrid();
-    this.gridColors = [];
-    this.agent = new RLAgent(this.grid, [0, 0], policy);
+    this.updateGridDimensions();
   }
 
-  private createGrid() {
-    return createGameFieldGrid({
+  private get widthInput(): HTMLInputElement {
+    return this.renderRoot.querySelector('#width-input')!;
+  }
+
+  private get heightInput(): HTMLInputElement {
+    return this.renderRoot.querySelector('#height-input')!;
+  }
+
+  private updateGridDimensions() {
+    this.grid = createGameFieldGrid({
       width: this.width,
       height: this.height,
     });
+    this.gridColors = [];
+    this.gridPolicy = [];
+    this.agent = new RLAgent(this.grid, [0, 0], policy);
   }
 
   private createGridColors(grid: Grid2D<number>) {
     // TODO use data
-    return grid.map(row => row.map(() => colorScale.getAt(Math.random())));
+    return grid.map(row => row.map(val => colorScale.getAt(val)));
   }
 
-  private onWidthChange(e: InputEvent) {
-    if (!e.currentTarget) {
-      return;
-    }
+  private onDimensionChange(event: Event) {
+    event.preventDefault();
+    this.width = parseInt(this.widthInput.value, 10);
+    this.height = parseInt(this.heightInput.value, 10);
 
-    this.width = parseInt((e.currentTarget as HTMLInputElement).value, 10);
-    this.grid = this.createGrid();
-    // this.gridColors = this.createGridColors();
-  }
-
-  private onHeightChange(e: InputEvent) {
-    if (!e.currentTarget) {
-      return;
-    }
-
-    this.height = parseInt((e.currentTarget as HTMLInputElement).value, 10);
-    this.grid = this.createGrid();
-    // this.gridColors = this.createGridColors();
+    this.updateGridDimensions();
   }
 
   private async runRL() {
-    const result = await this.agent.runEpisodes(100);
+    const result = await this.agent.runEpisodes(10000);
 
     // console.log(result);
     const updatedPolicy = this.agent.getOptimalPolicy();
 
-    const scaledAV = normalize2DGrid(updatedPolicy);
+    const visitsGrid = this.agent.getStateVisitsMap();
+    const scaledVisitsGrid = normalize2DGrid(visitsGrid);
 
     console.log(
+      'steps',
       result.reduce((acc, cur) => acc + cur.steps, 0) / result.length
+    );
+    console.log(
+      'reward',
+      result.reduce((acc, cur) => acc + cur.reward, 0) / result.length
     );
 
     console.log(updatedPolicy);
-    console.log(scaledAV);
-    this.gridColors = this.createGridColors(scaledAV);
+    // console.log(updatedPolicy);
+    // console.log(scaledAV);
+    this.gridPolicy = updatedPolicy;
+    this.gridColors = this.createGridColors(scaledVisitsGrid);
   }
 
   render() {
     return html`
       <main>
         <h1>${this.title}</h1>
-        <div class="controls">
+        <form
+          class="controls"
+          @submit=${this.onDimensionChange}
+          id="dimensions-form"
+        >
           <div class="controls__input-wrapper">
             <label for="width-input" class="controls__label">Width</label>
             <input
@@ -141,7 +154,6 @@ export class Root extends LitElement {
               min="0"
               max="100"
               .value="${this.width}"
-              @change="${this.onWidthChange}"
               id="width-input"
             />
           </div>
@@ -152,13 +164,14 @@ export class Root extends LitElement {
               type="number"
               min="0"
               max="100"
-              @change="${this.onHeightChange}"
               .value="${this.height}"
             />
           </div>
-        </div>
+          <button type="submit">apply</button>
+        </form>
         <button @click="${this.runRL}">run RL</button>
         <rl-visual-grid
+          .gridPolicy=${this.gridPolicy}
           .gridValues=${this.grid}
           .gridColors=${this.gridColors}
           .width=${this.width}

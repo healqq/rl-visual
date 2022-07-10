@@ -1,16 +1,22 @@
+import { maxAtIndex } from '../util/array';
 import {
   Coordinate2D,
+  create2DGrid,
   create3DGrid,
   GameFieldElementKind,
   Grid2D,
   Grid3D,
+  shape,
 } from '../util/grid';
 import { Policy, PolicyAction } from './Policy';
 import { rewardMap } from './problem';
 
 interface EpisodeRecord {
   steps: number;
+  reward: number;
 }
+
+// TODO: split agent and environment
 class RLAgent {
   private field: Grid2D<GameFieldElementKind>;
 
@@ -22,26 +28,40 @@ class RLAgent {
 
   private policy: Policy;
 
-  private stepSize: number = 0.01;
+  private stepSize: number = 0.1;
 
   private discount: number = 1;
 
   private dimensions: { x: number; y: number };
+
+  private overallSteps: number = 0;
+
+  private exporationCoefficient: number;
+
+  private visits: Grid2D<number>;
 
   constructor(
     field: Grid2D<GameFieldElementKind>,
     initialState: Coordinate2D,
     policy: Policy
   ) {
+    const fieldShape = shape(field);
     this.episodes = [];
-    this.dimensions = { x: field.length, y: field[0].length };
+    this.dimensions = { x: fieldShape[0], y: fieldShape[1] };
     this.initialState = initialState;
     this.field = field;
     this.policy = policy;
+    this.exporationCoefficient = this.dimensions.x * this.dimensions.y;
     this.actionValues = create3DGrid(
       {
         ...this.dimensions,
         z: this.policy.getActions().length,
+      },
+      0
+    );
+    this.visits = create2DGrid(
+      {
+        ...this.dimensions,
       },
       0
     );
@@ -50,22 +70,24 @@ class RLAgent {
   private doAction([x, y]: Coordinate2D, action: PolicyAction): Coordinate2D {
     switch (action) {
       case PolicyAction.LEFT:
-        return [Math.max(x - 1, 0), y];
+        return [x - 1, y];
       case PolicyAction.TOP:
-        return [x, Math.max(y - 1, 0)];
+        return [x, y - 1];
       case PolicyAction.RIGHT:
-        return [Math.min(x + 1, this.dimensions.x - 1), y];
+        return [x + 1, y];
       case PolicyAction.BOTTOM:
-        return [x, Math.min(y + 1, this.dimensions.y - 1)];
+        return [x, y + 1];
     }
   }
 
-  private doStep([x, y]: Coordinate2D): [Coordinate2D, PolicyAction] {
-    const action = this.policy.getActionForState(this.actionValues[x][y]);
+  private getNextAction([x, y]: Coordinate2D): PolicyAction {
+    const action = this.policy.getActionForState(
+      this.actionValues[x][y],
+      this.exporationCoefficient /
+        (this.exporationCoefficient + Math.sqrt(this.overallSteps))
+    );
 
-    const newState = this.doAction([x, y], action);
-
-    return [newState, action];
+    return action;
   }
 
   private updateActionValueForState({
@@ -83,43 +105,91 @@ class RLAgent {
     reward: number;
     isTerminal: boolean;
   }): void {
+    // console.log('last state', lastState);
+    // console.log('before update', this.actionValues[lastState[0]][lastState[1]]);
+    // console.log('action', PolicyAction[lastAction]);
+    // console.log('new state', newState);
+    // console.log('new state Q', this.actionValues[newState[0]][newState[1]]);
+    // console.log('new action', PolicyAction[lastAction]);
     const qSt = this.actionValues[lastState[0]][lastState[1]][lastAction];
     const qSt1 = isTerminal
-      ? this.actionValues[newState[0]][newState[1]][newAction]
-      : 0;
+      ? 0
+      : this.actionValues[newState[0]][newState[1]][newAction];
     this.actionValues[lastState[0]][lastState[1]][lastAction] =
       qSt + this.stepSize * (reward + this.discount * qSt1 - qSt);
+    // console.log('after update', this.actionValues[lastState[0]][lastState[1]]);
+  }
+
+  private isOutOfBounds([x, y]: Coordinate2D) {
+    return x < 0 || x >= this.dimensions.x || y < 0 || y >= this.dimensions.y;
   }
 
   private runEpisode(): EpisodeRecord {
     const episodeState: EpisodeRecord = {
       steps: 0,
+      reward: 0,
     };
 
     let isTerminalState = false;
-    let currentAction = Math.floor(Math.random() * 4);
-    let currentState: Coordinate2D = [...this.initialState];
+    let lastState: Coordinate2D = [...this.initialState];
+    let lastAction = this.getNextAction(lastState);
+
     while (!isTerminalState) {
-      const [newState, newAction] = this.doStep(currentState);
+      let currentState = this.doAction(lastState, lastAction);
+      let reward: number;
+      // eslint-disable-next-line prefer-const
 
-      const fieldType: GameFieldElementKind =
-        this.field[newState[0]][newState[1]];
+      if (this.isOutOfBounds(currentState)) {
+        // console.log(currentState);
+        reward = -100;
+        currentState = [...lastState];
+        isTerminalState = false;
+      } else {
+        const fieldType: GameFieldElementKind =
+          this.field[currentState[0]][currentState[1]];
 
-      isTerminalState = fieldType === GameFieldElementKind.FINISH;
-      const reward = rewardMap[fieldType];
+        isTerminalState = fieldType === GameFieldElementKind.FINISH;
+        reward = rewardMap[fieldType];
+      }
+
+      const newAction = this.getNextAction(currentState);
+
+      // isTerminalState = episodeState.steps > 15;
 
       this.updateActionValueForState({
-        newState,
-        lastState: currentState,
-        lastAction: currentAction,
+        newState: currentState,
+        lastState,
+        lastAction,
         newAction,
         reward,
         isTerminal: isTerminalState,
       });
 
-      currentState = newState;
-      currentAction = newAction;
+      // if (this.overallSteps % 1000 === 0) {
+      // console.log(
+      //   lastState,
+      //   PolicyAction[lastAction],
+      //   newState,
+      //   PolicyAction[newAction],
+      //   this.actionValues[lastState[0]][lastState[1]],
+      //   this.actionValues[newState[0]][newState[1]],
+      //   isTerminalState);
+      // }
+
+      // console.log({
+      //   qSt: this.actionValues[lastState[0]][lastState[1]][lastAction],
+      //   qSt1: this.actionValues[newState[0]][newState[1]][newAction],
+      //   newAction,
+      //   reward,
+      //   isTerminal: isTerminalState,
+      // });
+
+      lastState = currentState;
+      lastAction = newAction;
       episodeState.steps += 1;
+      episodeState.reward += reward;
+      this.overallSteps += 1;
+      this.visits[lastState[0]][lastState[1]] += 1;
     }
 
     return episodeState;
@@ -136,7 +206,15 @@ class RLAgent {
   }
 
   public getOptimalPolicy(): Grid2D<number> {
+    return this.actionValues.map(row => row.map(col => maxAtIndex(col)));
+  }
+
+  public getOptimalQValues(): Grid2D<number> {
     return this.actionValues.map(row => row.map(col => Math.max(...col)));
+  }
+
+  public getStateVisitsMap(): Grid2D<number> {
+    return this.visits;
   }
 }
 

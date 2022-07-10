@@ -1,3 +1,5 @@
+import { maxAtIndex } from '../util/array';
+
 export enum PolicyAction {
   TOP = 0,
   RIGHT = 1,
@@ -5,21 +7,11 @@ export enum PolicyAction {
   LEFT = 3,
 }
 
-const maxAtIndex = (array: number[]): number => {
-  let maxIndex = 0;
-  let max = array[0];
-  for (let i = 1; i < array.length; i += 1) {
-    if (array[i] > max) {
-      max = array[i];
-      maxIndex = i;
-    }
-  }
-
-  return maxIndex;
-};
-
 export interface Policy {
-  getActionForState(actionValuesForState: number[]): PolicyAction;
+  getActionForState(
+    actionValuesForState: number[],
+    greediness: number
+  ): PolicyAction;
   getActions(): PolicyAction[];
 }
 
@@ -33,14 +25,20 @@ class GreedyPolicy implements Policy {
 
   constructor(private eps: number = 0.1) {}
 
-  public getActionForState(actionValuesForState: number[]): PolicyAction {
-    const isRandomAction = Math.random() < this.eps;
+  public getActionForState(
+    actionValuesForState: number[],
+    greediness: number
+  ): PolicyAction {
+    const isRandomAction = Math.random() < this.eps * greediness;
 
     if (isRandomAction) {
       return this.actions[Math.floor(Math.random() * this.actions.length)];
     }
+    // console.log('policy-qv', actionValuesForState);
+    const result = this.actions[maxAtIndex(actionValuesForState)];
+    // console.log('poicty-new-action', result);
 
-    return this.actions[maxAtIndex(actionValuesForState)];
+    return result;
   }
 
   public getActions(): PolicyAction[] {
