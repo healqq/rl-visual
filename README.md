@@ -2,19 +2,32 @@
   <img width="200" src="https://open-wc.org/hero.png"></img>
 </p>
 
-## Open-wc Starter App
+[Hosted on github pages](https://healqq.github.io/rl-visual/)
 
-[![Built with open-wc recommendations](https://img.shields.io/badge/built%20with-open--wc-blue.svg)](https://github.com/open-wc)
+## RL agent for gridworld problem
 
-## Quickstart
+JavaScript implementation for a TD RL agent learning optimal paths on a gridworld.
+Inspired by [Reinforcement learning specialization](https://www.coursera.org/specializations/reinforcement-learning)
 
-To get started:
+To regenerate a new random gridworld - click "apply". 
 
-```sh
-npm init @open-wc
-# requires node 10 & npm 6 or higher
-```
+Amount of bombs is scaled bases on size of grid world.
 
+To learn an agent - click on "run RL". Might take some time on slower devices or bigger grid sizes.
+
+
+## Current state
+- implemented a gridworld problem with some obstacles(bombs are bad for the agent)
+- implemented SARSA agent with these parameters:
+  - ε-greedy policy (starting with 0.5 and decaying over time)
+  - 1000 episodes
+  - no discounted reward
+  - step size of 0.1
+
+ 
+# Frontend
+
+[Open Web Components](https://open-wc.org/) library is used for frontend. No specific reason for it, just wanted to give it a try :)
 ## Scripts
 
 - `start` runs your app for development, reloading on file changes
@@ -23,8 +36,3 @@ npm init @open-wc
 - `test` runs your test suite with Web Test Runner
 - `lint` runs the linter for your project
 
-## Tooling configs
-
-For most of the tools, the configuration is in the `package.json` to reduce the amount of files in your project.
-
-If you customize the configuration a lot, you can consider moving them to individual files.
