@@ -1,7 +1,3 @@
-<p align="center">
-  <img width="200" src="https://open-wc.org/hero.png"></img>
-</p>
-
 [Hosted on github pages](https://healqq.github.io/rl-visual/)
 
 ## RL agent for gridworld problem
