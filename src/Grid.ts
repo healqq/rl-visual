@@ -35,7 +35,7 @@ export class Grid extends LitElement {
 
   static styles = css`
     .grid {
-      --grid-cell-size: 30px;
+      --grid-cell-size: 24px;
 
       display: grid;
       gap: 1px;
@@ -79,8 +79,8 @@ export class Grid extends LitElement {
       <section
         class="grid"
         style=${styleMap({
-          gridTemplateColumns: `repeat(${this.width}, 1fr)`,
-          gridTemplateRows: `repeat(${this.height}, 1fr)`,
+          gridTemplateColumns: `repeat(${this.width}, var(--grid-cell-size))`,
+          gridTemplateRows: `repeat(${this.height}, var(--grid-cell-size))`,
         })}
       >
         ${this.gridValues.flatMap((row, x) =>
