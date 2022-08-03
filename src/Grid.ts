@@ -58,19 +58,19 @@ export class Grid extends LitElement {
     }
 
     .grid__cell--overlay-0:before {
-      content: '🡡';
+      content: '⭡';
     }
 
     .grid__cell--overlay-1:before {
-      content: '🡢';
+      content: '➝';
     }
 
     .grid__cell--overlay-2:before {
-      content: '🡣';
+      content: '⭣';
     }
 
     .grid__cell--overlay-3:before {
-      content: '🡠';
+      content: '⭠';
     }
   `;
 
