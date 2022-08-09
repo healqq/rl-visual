@@ -114,7 +114,7 @@ export class Root extends LitElement {
   }
 
   private async runRL() {
-    const result = await this.rl.runEpisodes(100000);
+    const result = await this.rl.runEpisodes(10000);
 
     // console.log(result);
     const updatedPolicy = this.rl.getOptimalPolicy();
@@ -153,7 +153,7 @@ export class Root extends LitElement {
               type="number"
               min="0"
               max="100"
-              .value="${this.width}"
+              .value="${this.width.toString()}"
               id="width-input"
             />
           </div>
@@ -164,7 +164,7 @@ export class Root extends LitElement {
               type="number"
               min="0"
               max="100"
-              .value="${this.height}"
+              .value="${this.height.toString()}"
             />
           </div>
           <button type="submit">apply</button>
