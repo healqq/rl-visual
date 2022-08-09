@@ -9,8 +9,8 @@ import {
 import './Grid';
 import { ColorScale } from './colors/ColorScale';
 import { RGBColor } from './colors/types';
-import RLAgent from './rl/RLAgent';
 import GreedyPolicy, { PolicyAction } from './rl/Policy';
+import RLGlue from './rl/RLGlue';
 
 const colorScale = new ColorScale(
   { r: 239, g: 243, b: 255 },
@@ -38,7 +38,7 @@ export class Root extends LitElement {
   @state()
   protected height: number = 25;
 
-  protected agent!: RLAgent;
+  protected rl!: RLGlue;
 
   static styles = css`
     :host {
@@ -97,7 +97,7 @@ export class Root extends LitElement {
     });
     this.gridColors = [];
     this.gridPolicy = [];
-    this.agent = new RLAgent(this.grid, [0, 0], policy);
+    this.rl = new RLGlue(this.grid, [0, 0], policy);
   }
 
   private createGridColors(grid: Grid2D<number>) {
@@ -114,12 +114,12 @@ export class Root extends LitElement {
   }
 
   private async runRL() {
-    const result = await this.agent.runEpisodes(10000);
+    const result = await this.rl.runEpisodes(100000);
 
     // console.log(result);
-    const updatedPolicy = this.agent.getOptimalPolicy();
+    const updatedPolicy = this.rl.getOptimalPolicy();
 
-    const visitsGrid = this.agent.getStateVisitsMap();
+    const visitsGrid = this.rl.getStateVisitsMap();
     const scaledVisitsGrid = normalize2DGrid(visitsGrid);
 
     console.log(
