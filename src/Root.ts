@@ -7,10 +7,13 @@ import {
   normalize2DGrid,
 } from './util/grid';
 import './Grid';
+import './Stats';
 import { ColorScale } from './colors/ColorScale';
 import { RGBColor } from './colors/types';
 import GreedyPolicy, { PolicyAction } from './rl/Policy';
-import RLGlue from './rl/RLGlue';
+import RLGlue, { EpisodeRecord } from './rl/RLGlue';
+
+const RL_EPISODES_STEP = 100;
 
 const colorScale = new ColorScale(
   { r: 239, g: 243, b: 255 },
@@ -21,7 +24,7 @@ const policy = new GreedyPolicy(0.5);
 
 export class Root extends LitElement {
   @property({ type: String })
-  title = 'My app';
+  title = 'Gridworld RL';
 
   @state()
   protected grid!: Grid2D<GameFieldElementKind>;
@@ -33,29 +36,49 @@ export class Root extends LitElement {
   protected gridPolicy!: Grid2D<PolicyAction>;
 
   @state()
+  protected episodes: EpisodeRecord[] = [];
+
+  @state()
   protected width: number = 25;
 
   @state()
   protected height: number = 25;
+
+  @state()
+  protected isRLRunning: boolean = false;
 
   protected rl!: RLGlue;
 
   static styles = css`
     :host {
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
+      display: grid;
+      grid-template-areas:
+        'header header'
+        'grid stats';
       font-size: 1rem;
-      max-width: 960px;
       margin: 0 auto;
       text-align: center;
       background-color: var(--rl-visual-background-color);
+      gap: 12px;
+      grid-template-columns: max-content max-content;
+      grid-template-rows: max-content max-content;
+      padding: 8px;
+      overflow: hidden;
     }
 
-    main {
-      flex-grow: 1;
+    h1 {
+      grid-area: header;
+      text-align: center;
+    }
+
+    .main__grid {
+      flex: 1;
+      grid-area: grid;
+    }
+
+    rl-visual-stats {
+      grid-area: stats;
     }
 
     .controls {
@@ -114,7 +137,12 @@ export class Root extends LitElement {
   }
 
   private async runRL() {
-    const result = await this.rl.runEpisodes(10000);
+    if (this.isRLRunning) {
+      return;
+    }
+
+    this.isRLRunning = true;
+    await this.rl.runEpisodes(RL_EPISODES_STEP);
 
     // console.log(result);
     const updatedPolicy = this.rl.getOptimalPolicy();
@@ -122,26 +150,16 @@ export class Root extends LitElement {
     const visitsGrid = this.rl.getStateVisitsMap();
     const scaledVisitsGrid = normalize2DGrid(visitsGrid);
 
-    console.log(
-      'steps',
-      result.reduce((acc, cur) => acc + cur.steps, 0) / result.length
-    );
-    console.log(
-      'reward',
-      result.reduce((acc, cur) => acc + cur.reward, 0) / result.length
-    );
-
-    console.log(updatedPolicy);
-    // console.log(updatedPolicy);
-    // console.log(scaledAV);
+    this.episodes = this.rl.getEpisodes();
     this.gridPolicy = updatedPolicy;
     this.gridColors = this.createGridColors(scaledVisitsGrid);
+    this.isRLRunning = false;
   }
 
   render() {
     return html`
-      <main>
-        <h1>${this.title}</h1>
+      <h1>${this.title}</h1>
+      <div class="main__grid">
         <form
           class="controls"
           @submit=${this.onDimensionChange}
@@ -169,7 +187,9 @@ export class Root extends LitElement {
           </div>
           <button type="submit">apply</button>
         </form>
-        <button @click="${this.runRL}">run RL</button>
+        <button @click="${this.runRL}" .disabled=${this.isRLRunning}>
+          run RL
+        </button>
         <rl-visual-grid
           .gridPolicy=${this.gridPolicy}
           .gridValues=${this.grid}
@@ -178,7 +198,8 @@ export class Root extends LitElement {
           .height=${this.height}
         >
         </rl-visual-grid>
-      </main>
+      </div>
+      <rl-visual-stats .episodes=${this.episodes}></rl-visual-stats>
     `;
   }
 }

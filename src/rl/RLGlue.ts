@@ -9,7 +9,7 @@ import { Policy, PolicyAction } from './Policy';
 import RLAgent from './RLAgent';
 import RLEnvironment from './RLEnvironment';
 
-interface EpisodeRecord {
+export interface EpisodeRecord {
   steps: number;
   reward: number;
 }
@@ -115,6 +115,10 @@ class RLGlue {
 
   public getStateVisitsMap(): Grid2D<number> {
     return this.visits;
+  }
+
+  public getEpisodes(): EpisodeRecord[] {
+    return [...this.episodes];
   }
 }
 

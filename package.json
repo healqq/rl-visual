@@ -15,6 +15,7 @@
     "start": "tsc && concurrently -k -r \"tsc --watch --preserveWatchOutput\" \"wds\""
   },
   "dependencies": {
+    "chart.js": "^3.9.1",
     "lit": "^2.0.2"
   },
   "devDependencies": {
@@ -49,7 +50,9 @@
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
-      "project": ["./tsconfig.json"]
+      "project": [
+        "./tsconfig.json"
+      ]
     },
     "extends": [
       "@open-wc",
@@ -65,11 +68,17 @@
       ],
       "consistent-return": "off",
       "no-useless-constructor": "off",
-      "@typescript-eslint/no-useless-constructor": ["error"],
+      "@typescript-eslint/no-useless-constructor": [
+        "error"
+      ],
       "no-empty-function": "off",
-      "@typescript-eslint/no-empty-function": ["error"],
+      "@typescript-eslint/no-empty-function": [
+        "error"
+      ],
       "no-shadow": "off",
-      "@typescript-eslint/no-shadow": ["error"],
+      "@typescript-eslint/no-shadow": [
+        "error"
+      ],
       "default-case": "off",
       "@typescript-eslint/switch-exhaustiveness-check": "error",
       "class-methods-use-this": "off",
@@ -81,7 +90,14 @@
           "ts": "never"
         }
       ],
-      "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.ts"]}]    
+      "import/no-extraneous-dependencies": [
+        "error",
+        {
+          "devDependencies": [
+            "**/*.test.ts"
+          ]
+        }
+      ]
     }
   },
   "prettier": {
