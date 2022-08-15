@@ -12,8 +12,12 @@ import { ColorScale } from './colors/ColorScale';
 import { RGBColor } from './colors/types';
 import GreedyPolicy, { PolicyAction } from './rl/Policy';
 import RLGlue, { EpisodeRecord } from './rl/RLGlue';
+import '@material/mwc-button';
+import '@material/mwc-textfield';
 
-const RL_EPISODES_STEP = 100;
+const RL_EPISODES_STEP = 500;
+
+const RL_STEPS = 20;
 
 const colorScale = new ColorScale(
   { r: 239, g: 243, b: 255 },
@@ -47,8 +51,12 @@ export class Root extends LitElement {
   @state()
   protected isRLRunning: boolean = false;
 
+  @state()
+  protected timerId!: number;
+
   protected rl!: RLGlue;
 
+  // https://colors.dopely.top/palette-generator/O1zafQDsRPf
   static styles = css`
     :host {
       min-height: 100vh;
@@ -59,7 +67,7 @@ export class Root extends LitElement {
       font-size: 1rem;
       margin: 0 auto;
       text-align: center;
-      background-color: var(--rl-visual-background-color);
+      background-color: #fff;
       gap: 12px;
       grid-template-columns: max-content max-content;
       grid-template-rows: max-content max-content;
@@ -84,19 +92,9 @@ export class Root extends LitElement {
     .controls {
       display: flex;
       flex-direction: column;
+      gap: 12px;
       margin-bottom: 20px;
-    }
-
-    .controls__input-wrapper {
-      display: flex;
-      flex-direction: column;
-      justify-items: flex-start;
-      margin-bottom: 10px;
-    }
-
-    .controls__label {
-      text-align: left;
-      font-size: 0.9rem;
+      padding: 12px;
     }
   `;
 
@@ -136,15 +134,9 @@ export class Root extends LitElement {
     this.updateGridDimensions();
   }
 
-  private async runRL() {
-    if (this.isRLRunning) {
-      return;
-    }
-
-    this.isRLRunning = true;
+  private async runRLLoop() {
     await this.rl.runEpisodes(RL_EPISODES_STEP);
 
-    // console.log(result);
     const updatedPolicy = this.rl.getOptimalPolicy();
 
     const visitsGrid = this.rl.getStateVisitsMap();
@@ -153,7 +145,25 @@ export class Root extends LitElement {
     this.episodes = this.rl.getEpisodes();
     this.gridPolicy = updatedPolicy;
     this.gridColors = this.createGridColors(scaledVisitsGrid);
-    this.isRLRunning = false;
+
+    if (this.episodes.length < RL_STEPS * RL_EPISODES_STEP) {
+      this.timerId = window.setTimeout(async () => {
+        await this.runRL();
+      }, 1000);
+    } else {
+      this.isRLRunning = false;
+    }
+  }
+
+  private runRL() {
+    if (this.isRLRunning) {
+      this.isRLRunning = false;
+      if (this.timerId) {
+        window.clearTimeout(this.timerId);
+      }
+    }
+    this.runRLLoop();
+    this.isRLRunning = true;
   }
 
   render() {
@@ -165,30 +175,45 @@ export class Root extends LitElement {
           @submit=${this.onDimensionChange}
           id="dimensions-form"
         >
-          <div class="controls__input-wrapper">
-            <label for="width-input" class="controls__label">Width</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              .value="${this.width.toString()}"
-              id="width-input"
-            />
-          </div>
-          <div class="controls__input-wrapper">
-            <label for="height-input" class="controls__label">Height</label>
-            <input
-              id="height-input"
-              type="number"
-              min="0"
-              max="100"
-              .value="${this.height.toString()}"
-            />
-          </div>
-          <button type="submit">apply</button>
+          <mwc-textfield
+            label="Width"
+            type="number"
+            min="0"
+            max="100"
+            .value="${this.width.toString()}"
+            id="width-input"
+          >
+          </mwc-textfield>
+          <mwc-textfield
+            label="Height"
+            id="height-input"
+            type="number"
+            min="0"
+            max="100"
+            .value="${this.height.toString()}"
+          >
+          </mwc-textfield>
+          <mwc-button  type="submit" 
+          .disabled=${this.isRLRunning}
+          .outlined=${true}>
+          apply
+        </mwc-button>
+
+        <mwc-button 
+          .filled=${true}
+          .unelevated=${this.isRLRunning}
+          @click="${this.runRL}">
+          ${
+            this.isRLRunning
+              ? `running RL: ${
+                  this.episodes.length / RL_EPISODES_STEP
+                }/${RL_STEPS}`
+              : 'run RL'
+          }
+        </mwc-button>
         </form>
-        <button @click="${this.runRL}" .disabled=${this.isRLRunning}>
-          run RL
+
+          
         </button>
         <rl-visual-grid
           .gridPolicy=${this.gridPolicy}

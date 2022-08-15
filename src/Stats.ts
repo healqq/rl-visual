@@ -11,6 +11,7 @@ import {
 import { LitElement, html, css, TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { EpisodeRecord } from './rl/RLGlue';
+import { movingAverage } from './util/array';
 
 Chart.register(
   LineController,
@@ -21,7 +22,15 @@ Chart.register(
   Title
 );
 
-const getChartConfig = (label: string): ChartConfiguration => ({
+const MA_WINDOW_SIZE = 50;
+
+const getChartConfig = ({
+  label,
+  color,
+}: {
+  label: string;
+  color: string;
+}): ChartConfiguration => ({
   type: 'line',
   options: {
     responsive: false,
@@ -35,20 +44,37 @@ const getChartConfig = (label: string): ChartConfiguration => ({
         type: 'logarithmic',
       },
     },
+    plugins: {
+      title: {
+        display: true,
+        text: label,
+        font: {
+          size: 14 * 1.5,
+          weight: 'bold',
+        },
+      },
+    },
   },
   data: {
-    datasets: [{ data: [], label, backgroundColor: '#330066' }],
+    datasets: [
+      {
+        data: [],
+        borderColor: color,
+        fill: false,
+        tension: 0.1,
+        pointRadius: 0,
+      },
+    ],
   },
 });
 
-const getRewardFromEpisode = (episode: EpisodeRecord, index: number) => ({
-  x: index,
-  y: -episode.reward,
-});
+const getRewardFromEpisode = (episode: EpisodeRecord) => -episode.reward;
 
-const getStepsFromEpisode = (episode: EpisodeRecord, index: number) => ({
-  x: index,
-  y: episode.steps,
+const getStepsFromEpisode = (episode: EpisodeRecord) => episode.steps;
+
+const mapToDataset = (item: number, index: number) => ({
+  x: index * MA_WINDOW_SIZE,
+  y: item,
 });
 
 @customElement('rl-visual-stats')
@@ -63,11 +89,12 @@ export class Grid extends LitElement {
   static styles = css`
     .stats {
       display: grid;
-      background: #ccc;
+      background: #fff;
       gap: 12px;
       grid-template-columns: 1fr;
       grid-template-rows: max-content;
       grid-auto-rows: 1fr;
+      padding: 12px;
     }
   `;
 
@@ -80,28 +107,28 @@ export class Grid extends LitElement {
 
     this.rewardChartRef = new Chart(
       ctxReward as HTMLCanvasElement,
-      getChartConfig('reward')
+      getChartConfig({ label: 'Reward', color: '#1D3557' })
     );
     this.stepsChartRef = new Chart(
       ctxSteps as HTMLCanvasElement,
-      getChartConfig('steps')
+      getChartConfig({ label: 'Steps', color: '#E63946' })
     );
   }
 
-  // willUpdate() {
-  //   console.log('q');
-  // }
-
   update(props: Map<string, unknown>) {
     if (this.rewardChartRef) {
-      this.rewardChartRef.data.datasets[0].data =
-        this.episodes.map(getRewardFromEpisode);
+      this.rewardChartRef.data.datasets[0].data = movingAverage(
+        this.episodes.map(getRewardFromEpisode),
+        MA_WINDOW_SIZE
+      ).map(mapToDataset);
       this.rewardChartRef.update();
     }
 
     if (this.stepsChartRef) {
-      this.stepsChartRef.data.datasets[0].data =
-        this.episodes.map(getStepsFromEpisode);
+      this.stepsChartRef.data.datasets[0].data = movingAverage(
+        this.episodes.map(getStepsFromEpisode),
+        MA_WINDOW_SIZE
+      ).map(mapToDataset);
       this.stepsChartRef.update();
     }
 
@@ -111,7 +138,6 @@ export class Grid extends LitElement {
   render(): TemplateResult {
     return html`
       <section class="stats">
-        ${this.episodes.length}
         <canvas width="400" height="400" id="reward-chart"></canvas>
         <canvas width="400" height="400" id="steps-chart"></canvas>
       </section>
